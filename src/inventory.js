@@ -15,6 +15,17 @@ const seed = {
 };
 const active = (state, id) => state.transactions.filter(t => t.itemId === id && !t.returnedAt).reduce((n, t) => n + t.quantity, 0);
 const available = (state, item) => item.total - item.maintenance - active(state, item.id);
+function filterInventory(state, { query = '', category = 'All', status = 'All' } = {}) {
+  const search = query.trim().toLowerCase();
+  return state.items.filter(item => {
+    if (category !== 'All' && item.category !== category) return false;
+    if (search && !item.name.toLowerCase().includes(search) && !item.id.toLowerCase().includes(search)) return false;
+    if (status === 'Available') return available(state, item) > 0;
+    if (status === 'Borrowed') return active(state, item.id) > 0;
+    if (status === 'Maintenance') return item.maintenance > 0;
+    return true;
+  });
+}
 function borrow(state, input) {
   const item = state.items.find(i => i.id === input.itemId);
   if (!item || !input.borrower.trim() || !input.studentId.trim()) throw new Error('Enter a borrower name and student / staff ID.');
@@ -33,4 +44,4 @@ function updateItem(state, id, condition, maintenance) {
   if (!item || !conditions.includes(condition) || !Number.isInteger(maintenance) || maintenance < 0 || maintenance > item.total - active(state, id)) throw new Error('Maintenance quantity must fit the stock currently on campus.');
   return { ...state, items: state.items.map(i => i.id === id ? { ...i, condition, maintenance } : i) };
 }
-module.exports = { categories, conditions, icons, seed, active, available, borrow, returnItem, updateItem };
+module.exports = { categories, conditions, icons, seed, active, available, filterInventory, borrow, returnItem, updateItem };
